@@ -1,0 +1,83 @@
+"0","library(dplyr)"
+"0","library(tidyverse)"
+"0","library(UpSetR)"
+"0","enriched_down <- list.files(path = ""./"", pattern=""*underexpressed*"") %>% map_df(~read_tsv(.) %>% mutate(annotation_id = as.character(annotation_id)))"
+"2","[1mRows: [22m[34m4402[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m937[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m1530[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m6061[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m343[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m692[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (2): description, genes
+[32mdbl[39m (9): annotation_id, genes_found, input_size, term_genes, universe, pval..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m111[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m1754[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"2","[1mRows: [22m[34m710[39m [1mColumns: [22m[34m11[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m ""\t""
+[31mchr[39m (3): description, annotation_id, genes
+[32mdbl[39m (8): genes_found, input_size, term_genes, universe, pval, pval_adj, rel..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."
+"0","enriched_down_stat_sign <- enriched_down[enriched_down$pval_adj < 0.05, ]"
+"0","enriched_down_cat_filter <- dplyr::filter(enriched_down_stat_sign, grepl(""heart|vessel|tissue|card|pulm|hyper"", description))"
+"0",""
+"0","annotation_vs_gene_under <- select(enriched_down_cat_filter, description, genes)"
+"0",""
+"0","gene_sets_under <- setNames(lapply(strsplit(annotation_vs_gene_under$genes, "",""), unique), annotation_vs_gene_under$description)"
+"0","upset(fromList(gene_sets_under), order.by=""freq"")"

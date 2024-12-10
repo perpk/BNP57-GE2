@@ -1,0 +1,243 @@
+## ΒΝΠ 57 - Πρωτεομική, Γενωμική και Γονιδιοματική - 2η Γραπτή Εργασία
+
+### Κωνσταντίνος Περπερίδης
+
+------------------------------------------------------------------------
+
+---
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE)
+```
+
+-   Εγκατάσταση επιπλέον βιβλιοθηκών
+
+```{r}
+install.packages("maptools", repos = "https://packagemanager.posit.co/cran/2023-10-13")
+install.packages("UpSetR", repos = "http://cran.us.r-project.org")
+```
+
+-   Φόρτιση βιβλιοθηκών
+
+```{r}
+library(GEOquery)
+library(limma)
+library(umap)
+library(maptools)
+library(UpSetR)
+library(tidyverse)
+library(dplyr)
+```
+
+-   Φόρτιση συνόλου δεδομένων (GEO2R)
+
+```{r}
+gset <- getGEO("GSE26125", GSEMatrix =TRUE, AnnotGPL=FALSE)
+if (length(gset) > 1) idx <- grep("GPL11329", attr(gset, "names")) else idx <- 1
+gset <- gset[[idx]]
+```
+
+-   Αλλαγή ονομάτων στηλών για συμβατότητα με εργαλεία ανάλυσης (GEO2R)
+
+```{r}
+fvarLabels(gset) <- make.names(fvarLabels(gset))
+```
+
+-   Απόδοση μεταβλητής για διαχωρισμό των ομάδων (GEO2R)
+
+```{r}
+gsms <- "111111111111111100000"
+sml <- strsplit(gsms, split="")[[1]]
+```
+
+-   Μεταμόρφωση τιμών σε λογαριθμική κλίμακα (GEO2R)
+
+```{r}
+ex <- exprs(gset)
+qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm=T))
+LogC <- (qx[5] > 100) ||
+  (qx[6]-qx[1] > 50 && qx[2] > 0)
+if (LogC) { ex[which(ex <= 0)] <- NaN
+exprs(gset) <- log2(ex) }
+```
+
+-   Κανονικοποίηση τιμών έκφρασης (GEO2R)
+
+```{r}
+exprs(gset) <- normalizeBetweenArrays(exprs(gset))
+```
+
+-   Αντιστοίχιση δειγμάτων σε ομάδες και δημιουργία μήτρας σχεδίου (GEO2R)
+
+```{r}
+gs <- factor(sml)
+groups <- make.names(c("control","disease"))
+levels(gs) <- groups
+gset$group <- gs
+design <- model.matrix(~group + 0, gset)
+colnames(design) <- levels(gs)
+```
+
+-   Παράλειψη κενών τιμών (GEO2R)
+
+```{r}
+gset <- gset[complete.cases(exprs(gset)), ]
+```
+
+-   Προσαρμογή δεδομένων σε γραμμικό μοντέλο για ανάλυση μέσω limma (GEO2R)
+
+```{r}
+fit <- lmFit(gset, design)
+```
+
+- Επανυπολογισμός συντελεστών μοντέλου (GEO2R)
+
+```{r}
+cts <- paste(groups[1], groups[2], sep="-")
+cont.matrix <- makeContrasts(contrasts=cts, levels=design)
+fit2 <- contrasts.fit(fit, cont.matrix)
+```
+
+- Στατιστική ανάλυση (GEO2R)
+
+```{r}
+fit2 <- eBayes(fit2, 0.01)
+tT <- topTable(fit2, adjust="fdr", sort.by="B", number=250)
+
+tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","GeneName","GB_LIST","Gene_Symbol","SPOT_ID"))
+write.table(tT, file=stdout(), row.names=F, sep="\t")
+```
+
+- Οπτικοποίηση ελέγχου ποιότητας της στατιστικής ανάλυσης (GEO2R)
+
+```{r}
+tT2 <- topTable(fit2, adjust="fdr", sort.by="B", number=Inf)
+hist(tT2$adj.P.Val, col = "grey", border = "white", xlab = "P-adj",
+     ylab = "Number of genes", main = "P-adj value distribution")
+tT2_df <- as.data.frame(tT2)
+View(tT2_df)
+
+tT2_df_diffexp <- tT2_df[(tT2_df$logFC >= 1 | tT2_df$logFC <= -1) & tT2_df$adj.P.Val <= 0.05, ]
+tT2_df_over <- tT2_df_diffexp[tT2_df_diffexp$logFC >= 1, ]
+View(tT2_df_over)
+```
+
+- Διαχωρισμός υπερ- και υπο-εκφραζόμενων γονιδίων και καταγραφή σε αρχεία για ανάλυση εμπλουτισμού
+
+```{r}
+overexpressed_genes <- as.vector(tT2_df_over[tT2_df_over$Gene_Symbol != '',]$Gene_Symbol)
+overexpressed_genes <- append(overexpressed_genes, tT2_df_over[tT2_df_over$Name != '',]$Name)
+overexpressed_genes <- unique(overexpressed_genes)
+
+View(overexpressed_genes)
+
+tT2_df_under <- tT2_df_diffexp[tT2_df_diffexp$logFC <= -1, ]
+underexpressed_genes <- as.vector(tT2_df_under[tT2_df_under$Gene_Symbol != '',]$Gene_Symbol)
+underexpressed_genes <- append(underexpressed_genes, tT2_df_under[tT2_df_over$Name != '',]$Name)
+underexpressed_genes <- unique(underexpressed_genes)
+
+fo<-file("upregulated.txt")
+writeLines(overexpressed_genes, fo)
+
+fu<-file("underregulated.txt")
+writeLines(underexpressed_genes, fu)
+```
+
+- Περίληψη αποτελεσμάτων σύμφωνα με αποτελέσματα στατιστικής ανάλυσης (GEO2R)
+
+```{r}
+dT <- decideTests(fit2, adjust.method="fdr", p.value=0.05, lfc=1)
+dT_df <- as.data.frame(dT)
+View(fit2)
+summary(dT)
+```
+
+- Οπτικοποίηση αποτελεμάτων σε μορφή διαγράμματος Venn  (GEO2R)
+
+```{r}
+vennDiagram(dT, circle.col=palette())
+```
+
+- Οπτικοποίηση αποτελέσματος t-test σε Quantile-Quantile Plot (GEO2R)
+
+```{r}
+t.good <- which(!is.na(fit2$F)) # filter out bad probes
+qqt(fit2$t[t.good], fit2$df.total[t.good], main="Moderated t statistic")
+```
+
+- Οπτικοποίηση σε διάγραμμα σκέδασης (Volcano-Plot) (GEO2R)
+
+```{r}
+colnames(fit2)
+ct <- 1
+volcanoplot(fit2, coef=ct, main=colnames(fit2)[ct], pch=20,
+            highlight=length(which(dT[,ct]!=0)), names=rep('+', nrow(fit2)))
+```
+
+- Οπτικοποίηση μέσων τιμών έκφρασης μέσω MD-Plot (GEO2R)
+
+```{r}
+plotMD(fit2, column=ct, status=dT[,ct], legend=F, pch=20, cex=1)
+abline(h=0)
+```
+
+- Γενική ανάλυση δεδομένων (GEO2R)
+
+```{r}
+ex <- exprs(gset)
+ord <- order(gs)  # order samples by group
+palette(c("#1B9E77", "#7570B3", "#E7298A", "#E6AB02", "#D95F02",
+          "#66A61E", "#A6761D", "#B32424", "#B324B3", "#666666"))
+par(mar=c(7,4,2,1))
+title <- paste ("GSE26125", "/", annotation(gset), sep ="")
+boxplot(ex[,ord], boxwex=0.6, notch=T, main=title, outline=FALSE, las=2, col=gs[ord], cex.axis=0.6)
+legend("topleft", groups, fill=palette(), bty="n")
+```
+
+- Κατανομή τιμών έκφρασης (GEO2R)
+
+```{r}
+par(mar=c(4,4,2,1))
+title <- paste ("GSE26125", "/", annotation(gset), " value distribution", sep ="")
+plotDensities(ex, group=gs, main=title, legend ="topright")
+```
+
+- Μείωση διαστάσεων δεδομένων μέσω UMAP (GEO2R)
+
+```{r}
+ex <- na.omit(ex) # eliminate rows with NAs
+ex <- ex[!duplicated(ex), ]  # remove duplicates
+ump <- umap(t(ex), n_neighbors = 9, random_state = 123)
+par(mar=c(3,3,2,6), xpd=TRUE)
+plot(ump$layout, main="UMAP plot, nbrs=9", xlab="", ylab="", col=gs, pch=20, cex=1.5)
+legend("bottomright", inset=c(-0.15,0), legend=levels(gs), pch=20,
+       col=1:nlevels(gs), title="Group", pt.cex=0.5)
+pointLabel(ump$layout, labels = rownames(ump$layout), method="SANN", cex=0.6)
+plotSA(fit2, main="Mean variance trend, GSE26125")
+```
+
+- Εισαγωγή των δεδομένων ανάλυσης εμπλουτισμού και οπτικοποίηση αποτελεσμάτων
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(UpSetR)
+enriched_down <- list.files(path = "./", pattern="*underexpressed*") %>% map_df(~read_tsv(.) %>% mutate(annotation_id = as.character(annotation_id)))
+enriched_down_stat_sign <- enriched_down[enriched_down$pval_adj < 0.05, ]
+enriched_down_cat_filter <- dplyr::filter(enriched_down_stat_sign, grepl("heart|vessel|tissue|card|pulm|hyper", description))
+
+annotation_vs_gene_under <- select(enriched_down_cat_filter, description, genes)
+
+gene_sets_under <- setNames(lapply(strsplit(annotation_vs_gene_under$genes, ","), unique), annotation_vs_gene_under$description)
+upset(fromList(gene_sets_under), order.by="freq")
+
+enriched_up <- list.files(path = "./", pattern="*overexpressed*") %>% map_df(~read_tsv(.) %>% mutate(annotation_id = as.character(annotation_id)))
+enriched_up_stat_sign <- enriched_up[enriched_up$pval_adj < 0.05, ]
+enriched_up_cat_filter <- dplyr::filter(enriched_up_stat_sign, grepl("heart|vessel|tissue|card|pulm", description))
+
+annotation_vs_gene_over <- select(enriched_up_stat_sign, description, genes)
+gene_sets_under <- setNames(lapply(strsplit(annotation_vs_gene_over$genes, ","), unique), annotation_vs_gene_over$description)
+upset(fromList(gene_sets_under), order.by="freq")
+```
